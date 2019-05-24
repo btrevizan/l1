@@ -1,6 +1,6 @@
 mkdir bin
-ocaml -c src/definitions.ml
-ocaml -c src/bigstep.ml
-ocaml -c src/inferator.ml
-ocaml -o l1 definitions.o bigstep.o inferator.o
-rm *.o
+mkdir obj
+ocamlopt src/definitions.ml src/inferator.ml src/bigstep.ml -o bin/l1
+mv src/*.cmi obj/
+mv src/*.cmx obj/
+
