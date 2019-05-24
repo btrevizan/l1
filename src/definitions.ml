@@ -35,6 +35,6 @@ type expression = Nval of int
 
 type env = (variable * value) list
 
-type typeEnv = (variable of typeDef) list
+type typeEnv = (variable * typeDef) list
 
 type typeEquations = (typeDef * typeDef) list
