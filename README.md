@@ -3,10 +3,10 @@ Implementação de um interpretador para a Linguagem L1 como trabalho final de S
 
 ## Compilação
 ```
-ocamlc l1.ml -o l1
+sh make.sh
 ```
 
 ## Execução
 ```
-./l1
+./bin/l1
 ```
