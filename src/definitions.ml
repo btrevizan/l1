@@ -1,8 +1,23 @@
 type variable = string
 
-type typeDef = TypeInt | TypeBool | TypeList of typeDef | TypeFn of typeDef * typeDef | TypeId of string
+type typeDef = TypeInt 
+			| TypeBool 
+			| TypeId of string 
+			| TypeFn of typeDef * typeDef 
+			| TypeList of typeDef
 
-type binaryOperator = Sum | Sub | Mult | Div | Equal | Diff | Less | LessOrEqual | Greater | GreaterOrEqual | And | Or
+type binaryOperator = Sum 
+					| Sub 
+					| Mult 
+					| Div 
+					| Equal 
+					| Diff 
+					| Less 
+					| LessOrEqual 
+					| Greater 
+					| GreaterOrEqual 
+					| And 
+					| Or
 
 type unaryOperator = Not
 
