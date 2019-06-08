@@ -1,10 +1,14 @@
 type variable = string
 
+type newVarGenerator = unit -> newVariable
+type newVariable = NewVariable of string * newVarGenerator
+
 type typeDef = TypeInt 
 			| TypeBool 
 			| TypeId of string 
 			| TypeFn of typeDef * typeDef 
 			| TypeList of typeDef
+			| TypePair of typeDef * typeDef 
 
 type binaryOperator = Sum 
 					| Sub 
@@ -29,7 +33,7 @@ type value = ValueNum of int
 			| VPair of value * value
 
 type expression = Nval of int
-				| Nbool of bool
+				| Bval of bool
 				| Binop of binaryOperator * expression * expression
 				| Unop of unaryOperator * expression
 				| Pair of expression * expression
@@ -40,7 +44,7 @@ type expression = Nval of int
 				| App of expression * expression
 				| Fn of variable * expression
 				| Let of variable * expression * expression
-				| Letrec of variable * expression * variable * expression * expression
+				| Letrec of variable * variable * expression * expression
 				| Nil
 				| Cons of expression * expression
 				| Hd of expression
