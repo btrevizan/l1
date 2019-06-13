@@ -41,9 +41,23 @@ let rec collect_rec (environment: typeEnv) (program: expression) (varGen: newVar
 		let (type2, eq2, gen2) = collect_rec environment e2 gen1 in
 		(TypePair(type1, type2), List.concat [eq1; eq2], gen2)
 
-	(* | Fst(e) -> como definir a regra *)
+	| Fst(e) -> 
+		let NewVariable(newVar1, newGen1) = varGen () in 
+		let NewVariable(newVar2, newGen2) = newGen1 () in 
+		let (type1, eq1, gen3) = collect_rec environment e newGen2 in
+		let x = TypeId(newVar1) in
+		let y = TypeId(newVar2) in
+		let new_eq = [(type1, TypePair(x, y))]
+		(x, List.concat [eq1; new_eq], gen3)
 
-	(* | Snd(e) -> como definir a regra *)
+	| Snd(e) -> como definir a regra
+		let NewVariable(newVar1, newGen1) = varGen () in 
+		let NewVariable(newVar2, newGen2) = newGen1 () in 
+		let (type1, eq1, gen3) = collect_rec environment e newGen2 in
+		let x = TypeId(newVar1) in
+		let y = TypeId(newVar2) in
+		let new_eq = [(type1, TypePair(x, y))]
+		(y, List.concat [eq1; new_eq], gen3)
 
 	| If(e1, e2, e3) ->
 		let (type1, eq1, gen1) = collect_rec environment e1 varGen in
