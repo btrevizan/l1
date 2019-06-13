@@ -71,7 +71,7 @@ let rec collect_rec (environment: typeEnv) (program: expression) (varGen: newVar
 			(let typeT = lookup environment var in
 			(typeT, [], varGen))
 		with
-			_ -> raise (VariableNotFound "Variable not found in environment"))
+			_ -> raise (VariableError "Variable not found in environment"))
 
 	| App(e1, e2) ->
 		let (type1, eq1, gen1) = collect_rec environment e1 varGen in
@@ -150,7 +150,85 @@ let rec collect_rec (environment: typeEnv) (program: expression) (varGen: newVar
 
 let collect (environment: typeEnv) (program: expression) = collect_rec environment program varGenerator
 
+let rec occur_check_rec (x: string) (t: typeDef) : bool = match t with
+	| TypeInt -> false
+	| TypeBool -> false
+	| TypeId(y) -> (y = x)
+	| TypeList(t1) -> occur_check_rec t1
+	| TypeFn(t1, t2) -> occur_check_rec t1 || occur_check_rec t2
+	| TypePair(t1, t2) -> occur_check_rec t1 || occur_check_rec t2
+
+let occur_check (x: string) (t: typeDef) : bool = occur_check_rec x t
+
+let rec typesub_rec (x: string) (t1: typeDef) (t2: typeDef) : typeDef = match t2 with
+	| TypeInt -> TypeInt
+
+	| TypeBool -> TypeBool
+
+	| TypeId(y) -> if occur_check x (TypeId(y)) then t1 else TypeId(y)
+	
+	| TypeList(t) -> let new_type = typesub_rec x t1 t in TypeList(new_type)
+	
+	| TypeFn(t3, t4) -> 
+		let new_type3 = typesub_rec x t1 t3 in
+		let new_type4 = typesub_rec x t1 t4 in
+		TypeFn(new_type3, new_type4)
+
+	| TypePair(t3, t4) -> 
+		let new_type3 = typesub_rec x t1 t3 in
+		let new_type4 = typesub_rec x t1 t4 in
+		TypePair(new_type3, new_type4)
+
+let typesub (x: string) (t1: typeDef) (t2: typeDef) : typeDef = typesub_rec x t1 t2
+
+let typesub_equation_rec (x: string) (t: typeDef) (type_equations: typeEquations) : typeEquations = match type_equations with
+	| [] -> []
+	| (t1, t2) :: c -> List.append [(typesub x t t1, typesub x t t2)] (typesub_rec x t c)
+
+let typesub_equation (x: string) (t: typeDef) (type_equations: typeEquations) : typeEquations = typesub_equation_rec x t type_equations
+
+let rec unify_rec (type_equations: typeEquations) : typeEquations = match type_equations with
+	| [] -> []
+
+	| (TypeInt, TypeInt) :: c -> unify_rec c
+
+	| (TypeBool, TypeBool) :: c -> unify_rec c
+
+	| (TypeList(t1), TypeList(t2)) :: c ->  unify_rec ((t1, t2) :: c)
+
+	| (TypeFn(t1, t2), TypeFn(t3, t4)) :: c -> unify_rec ((t1, t3) :: (t2, t4) :: c)
+
+	| (TypePair(t1, t2), TypePair(t3, t4)) :: c -> unify_rec ((t1, t3) :: (t2, t4) :: c)
+
+	| (TypeId(x), TypeId(x)) :: c -> unify_rec c
+
+	| (TypeId(x), t) :: c ->
+		if occur_check x t then
+			raise (UnifyError "x occurs in t.")
+		else
+			let substitutions = typesub_equation x t c in
+			let new_unification = unify_rec substitutions in
+			List.concat [new_unification; (TypeId(x), t)]
+
+	| (t, TypeId(x)) :: c -> 
+		if occur_check x t then
+			raise (UnifyError "x occurs in t.")
+		else
+			let substitutions = typesub_equation x t c in
+			let new_unification = unify_rec substitutions in
+			List.concat [new_unification; (TypeId(x), t)]
+
+	| (_, _) :: c -> raise (UnifyError "Cannot solve type equations.")
+
+let unify (type_equations: typeEquations) : typeEquations = unify_rec type_equations
+
+let rec applysubs_rec (type_equations: typeEquations) (t: typeDef) : typeDef = match type_equations with
+	| [] -> []
+	| (TypeId(x), t1) :: c -> List.append [typesub x t1 t] (applysubs_rec c t)
+
+let applysubs (type_equations: typeEquations) (t: typeDef) : typeDef = applysubs_rec type_equations t
+
 let typeinfer (environment: typeEnv) (program: expression) : typeDef = 
-	let (types, type_equations, varGen) = collect environment program in
-	let unification = unify [] type_equations in
-	applysubs unification types
+	let (prog_type, type_equations, varGen) = collect environment program in
+	let unification = unify type_equations in
+	applysubs unification prog_type

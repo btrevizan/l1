@@ -1,1 +1,2 @@
-exception VariableNotFound of string
+exception VariableError of string
+exception UnifyError of string
