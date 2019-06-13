@@ -49,6 +49,7 @@ type expression = Nval of int
 				| Cons of expression * expression
 				| Hd of expression
 				| Tl of expression
+				| Isempty of expression
 				| Raise
 				| Try of expression * expression
 

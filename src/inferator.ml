@@ -130,6 +130,13 @@ let rec collect_rec (environment: typeEnv) (program: expression) (varGen: newVar
 		let new_eq = [(type1, TypeList(x))] in
 		(TypeList(x), List.concat [eq1; new_eq], newGen)
 
+	| Isempty(e) ->
+		let (type1, eq1, gen1) = collect_rec environment e varGen in
+		let NewVariable(newVar, newGen) = gen1 () in
+		let x = TypeId(newVar) in
+		let new_eq = [(type1, TypeList(x))] in
+		(TypeBool, List.concat [eq1; new_eq], newGen)
+
 	| Raise -> 
 		let NewVariable(newVar, newGen) = varGen () in 
 		let x = TypeId(newVar) in 
