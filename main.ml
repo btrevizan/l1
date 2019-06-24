@@ -481,32 +481,47 @@ let rec expression_to_string (e: expression) : string = match e with
 	| Try(e1, e2) -> "try(" ^ (expression_to_string e1) ^ ") with (" ^ (expression_to_string e2) ^ ")"
 
 (* Test eval *)
-let rec run equations_list = match equations_list with
-	| e::tail -> 
-		let typeE = typeinfer [] e in
+let rec run_rec equations_list n = match equations_list with
+	| (e, correct_type)::tail -> 
+		let type_e = typeinfer [] e in
+		let s_type_e = type_to_string type_e in
+		let s_type = type_to_string correct_type in
 		(* let value = eval e in *)
+
+		print_endline "";
+		print_endline (string_of_int(n) ^ " =======================================");
 		
-		print_endline "=======================================";
-		
+		if (String.compare s_type_e s_type) != 0 then begin print_endline "======================== TYPE NOT CORRECT ========================"; exit(1); end
+		else ();
+
 		(* if value == v then 
-			print_endline "TEST PASSED ==========================="
+			print_endline "TEST PASSED ===========================";
 		else
-			print_endline "TEST NOT PASSED =======================" *)
+			print_endline "TEST NOT PASSED ======================="; *)
 
 		print_endline ("Expression: " ^ (expression_to_string e));
-		print_endline ("Type: " ^ (type_to_string typeE));
+		print_endline ("Type: " ^ s_type_e);
 		(* print_endline "Value: " ^ (value_to_string value); *)
-		run tail
+		print_endline "";
+
+		(run_rec tail (n + 1))
 
 	| [] -> ();;
 
+let run equations_list = run_rec equations_list 0
+
 (* Run all *)
-let es = [e0; e1; e2; e3; e4; e5; e6; e7; e8; e9;
-	      e10; e11; e12; e13; e14; e15; e16; e17; e18; e19;
-	      e20; e21; e22; e23; e24; e25; e26; e27; e28; e29;
-	      e30; e31; e32; e33; e34; e35; e36; e37; e38; e39;
-	      e40; e41; e42; e43; e44; e45; e46; e47; e48; e49;
-	      e50; e51];;
+let es = [(e0, TypeInt);  (e1, TypeInt);  (e2, TypeBool);  (e3, TypeBool);  (e4, TypeInt);  
+		  (e5, TypeInt);  (e6, TypeInt);  (e7, TypeInt);  (e8, TypeBool);  (e9, TypeBool);
+	      (e10, TypeBool); (e11, TypeBool); (e12, TypeBool); (e13, TypeBool); (e14, TypeBool); 
+	      (e15, TypeBool); (e16, TypeBool); (e17, TypeBool); (e18, TypeBool); (e19, TypeBool);
+	      (e20, TypeBool); (e21, TypeBool); (e22, TypeBool); (e23, TypeBool); (e24, TypeBool); 
+	      (e25, TypeBool); (e26, TypeBool); (e27, TypeBool); (e28, TypeBool); (e29, TypeBool);
+	      (e30, TypePair(TypeInt, TypeInt)); (e31, TypeInt); (e32, TypeInt); (e33, TypeInt); (e34, TypeInt); (e35, TypeBool); 
+	      (e36, TypeFn(TypeInt, TypeInt)); (e37, TypeInt); (e38, TypeInt); (e39, TypeInt);
+	      (e40, TypeInt); (e41, TypeList(TypeInt)); (e42, TypeList(TypeInt)); (e43, TypeInt); (e44, TypeList(TypeInt)); (e45, TypeBool); 
+	      (e46, TypeBool); (e47, TypeBool); (e48, TypeBool); (e49, TypeInt);
+	      (e50, TypeBool); (e51, TypeBool)];;
 
 print_endline "Running tests...";;
 run es;;
