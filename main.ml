@@ -32,6 +32,12 @@ type value = ValueNum of int
 			| ValueRaise
 			| VPair of value * value
 
+type env = (variable * value) list
+
+type typeEnv = (variable * typeDef) list
+
+type typeEquations = (typeDef * typeDef) list
+
 type expression = Nval of int
 				| Bval of bool
 				| Binop of binaryOperator * expression * expression
@@ -53,12 +59,6 @@ type expression = Nval of int
 				| Raise
 				| Try of expression * expression
 
-type env = (variable * value) list
-
-type typeEnv = (variable * typeDef) list
-
-type typeEquations = (typeDef * typeDef) list
-
 (* Exceptions *)
 exception VariableError of string
 exception OperationError of string
@@ -67,8 +67,7 @@ exception UnifyError of string
 (* Utils *)
 let rec generator n () = NewVariable("#x" ^ string_of_int n, generator (n + 1))
 let varGenerator = generator 0
-  
-  
+
 let rec lookup environment x = match environment with
 	| (y, v)::tail -> if (String.compare y x) == 0 then v else (lookup tail x)
 	| [] -> raise (VariableError("Variable not found in environment"))
@@ -297,6 +296,48 @@ let typeinfer (environment: typeEnv) (program: expression) : typeDef =
 	applysubs unification prog_type
 
 (* Bigstep *)
+(* let rec eval_rec (env: environment) (e: expression) : value = match e with
+	| Nval(n) -> ValueNum(n)
+
+	| Bval(n) -> ValueBool(n)
+
+	| Binop(op, e1, e2) ->
+
+	| Unop(op, e1) ->
+
+	| Pair(e1, e2) ->
+
+	| Fst(e1) ->
+	
+	| Snd(e1) ->
+	
+	| If(e1, e2,  e3) ->
+
+	| Id(x) ->
+
+	| App(e1, e2) ->
+	
+	| Fn(x, e1) ->
+	
+	| Let(x, e1, e2) ->
+
+	| Letrec(x, y, e1, e2) ->
+
+	| Nil -> ValueNil
+	
+	| Cons(e1, e2) ->
+	
+	| Hd(e1) ->
+
+	| Tl(e1) ->
+	
+	| Isempty(e1) ->
+	
+	| Raise -> ValueRaise
+	
+	| Try(e1, e2) ->
+
+let eval (e: expression) : value = eval_rec [] e *)
 
 (* Tests *)
 (* Test cases *)
