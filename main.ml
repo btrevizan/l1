@@ -25,19 +25,6 @@ type binaryOperator = Sum
 
 type unaryOperator = Not
 
-type value = ValueNum of int
-			| ValueBool of bool
-			| ValueNil 
-			| ValueCons of value * value
-			| ValueRaise
-			| VPair of value * value
-
-type env = (variable * value) list
-
-type typeEnv = (variable * typeDef) list
-
-type typeEquations = (typeDef * typeDef) list
-
 type expression = Nval of int
 				| Bval of bool
 				| Binop of binaryOperator * expression * expression
@@ -58,6 +45,18 @@ type expression = Nval of int
 				| Isempty of expression
 				| Raise
 				| Try of expression * expression
+
+type value = ValueNum of int
+			| ValueBool of bool
+			| ValueNil 
+			| ValueCons of value * value
+			| ValueRaise
+			| ValuePair of value * value
+			| ValueFn of variable * expression * env and env = (variable * value) list
+
+type typeEnv = (variable * typeDef) list
+
+type typeEquations = (typeDef * typeDef) list
 
 (* Exceptions *)
 exception VariableError of string
@@ -296,48 +295,147 @@ let typeinfer (environment: typeEnv) (program: expression) : typeDef =
 	applysubs unification prog_type
 
 (* Bigstep *)
-(* let rec eval_rec (env: environment) (e: expression) : value = match e with
+let rec eval_rec (environment: env) (e: expression) : value = match e with
 	| Nval(n) -> ValueNum(n)
 
 	| Bval(n) -> ValueBool(n)
 
 	| Binop(op, e1, e2) ->
+		let n1 = eval_rec environment e1 in
+		let n2 = eval_rec environment e2 in (
+		match (op, n1, n2) with
+			| (_, ValueRaise, _) -> ValueRaise
+			| (_, _, ValueRaise) -> ValueRaise
+			| (Sum, ValueNum(n1), ValueNum(n2)) -> ValueNum(n1 + n2)
+			| (Sub, ValueNum(n1), ValueNum(n2)) -> ValueNum(n1 - n2)
+			| (Mult, ValueNum(n1), ValueNum(n2)) -> ValueNum(n1 * n2)
+			| (Div, ValueNum(n1), ValueNum(n2)) -> if n2 != 0 then ValueNum(n1 / n2) else ValueRaise
+			| (Equal, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 == n2)
+			| (Diff, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 != n2)
+			| (Less, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 < n2)
+			| (LessOrEqual, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 <= n2)
+			| (Greater, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 > n2)
+			| (GreaterOrEqual, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 >= n2)
+			| (And, ValueBool(n1), ValueBool(n2)) -> ValueBool(n1 && n2)
+			| (Or, ValueBool(n1), ValueBool(n2)) -> ValueBool(n1 || n2)
+			| (_, _, _) -> raise (OperationError "Operation not found.")
+		)
 
 	| Unop(op, e1) ->
+		let n1 = eval_rec environment e1 in (
+		match (op, n1) with
+			| (_, ValueRaise) -> ValueRaise
+			| (Not, ValueBool(n1)) -> ValueBool(not n1)
+			| (_, _) -> raise (OperationError "Operation not found.")
+		)
 
 	| Pair(e1, e2) ->
+		let n1 = eval_rec environment e1 in 
+		let n2 = eval_rec environment e2 in (
+		match (n1, n2) with
+			| (_, ValueRaise) -> ValueRaise
+			| (ValueRaise, _) -> ValueRaise
+			| (_, _) -> ValuePair(n1, n2)
+		)
 
 	| Fst(e1) ->
+		let n1 = eval_rec environment e1 in (
+		match n1 with
+			| ValueRaise -> ValueRaise
+			| ValuePair(n11, n12) -> n11
+			| _ -> raise (OperationError "Operation not found.")
+		)
 	
 	| Snd(e1) ->
-	
-	| If(e1, e2,  e3) ->
+		let n1 = eval_rec environment e1 in (
+		match n1 with
+			| ValueRaise -> ValueRaise
+			| ValuePair(n11, n12) -> n12
+			| _ -> raise (OperationError "Operation not found.")
+		)
 
-	| Id(x) ->
+	| If(e1, e2,  e3) ->
+		let n1 = eval_rec environment e1 in (
+		match n1 with
+			| ValueRaise -> ValueRaise
+			| ValueBool(true) -> eval_rec environment e2
+			| ValueBool(false) -> eval_rec environment e3
+			| _ -> raise (OperationError "Operation not found.")
+		)
+
+	| Id(x) -> lookup environment x
 
 	| App(e1, e2) ->
+		let n1 = eval_rec environment e1 in 
+		let n2 = eval_rec environment e2 in (
+		match (n1, n2) with
+			| (ValueRaise, _) -> ValueRaise
+			| (_, ValueRaise) -> ValueRaise
+			| (ValueFn(x, f, f_env), n) -> eval_rec ((x,n)::f_env) f
+			| (_, _) -> raise (OperationError "Operation not found.")
+		)
 	
-	| Fn(x, e1) ->
+	| Fn(x, e1) -> ValueFn(x, e1, environment)
 	
 	| Let(x, e1, e2) ->
+		let n1 = eval_rec environment e1 in (
+		match n1 with
+			| ValueRaise -> ValueRaise
+			| _ -> eval_rec ((x, n1)::environment) e2
+		)
 
-	| Letrec(x, y, e1, e2) ->
+	| Letrec(x, y, e1, e2) -> 
+		let alpha' = ValueFn(y, Letrec(x, y, e1, e1), environment) in
+		eval_rec ((x, alpha')::environment) e2
 
 	| Nil -> ValueNil
 	
 	| Cons(e1, e2) ->
+		let n1 = eval_rec environment e1 in 
+		let n2 = eval_rec environment e2 in (
+		match (n1, n2) with
+			| (ValueRaise, _) -> ValueRaise
+			| (_, ValueRaise) -> ValueRaise
+			| (_, _) -> ValueCons(n1, n2)
+		)
 	
-	| Hd(e1) ->
+	| Hd(e1) -> 
+		let n1 = eval_rec environment e1 in (
+		match n1 with
+			| ValueRaise -> ValueRaise
+			| ValueNil -> ValueRaise
+			| ValueCons(n11, _) -> n11
+			| _ -> raise (OperationError "Operation not found.")
+		)
 
 	| Tl(e1) ->
+		let n1 = eval_rec environment e1 in (
+		match n1 with
+			| ValueRaise -> ValueRaise
+			| ValueNil -> ValueRaise
+			| ValueCons(_, n12) -> n12
+			| _ -> raise (OperationError "Operation not found.")
+		)
 	
 	| Isempty(e1) ->
+		let n1 = eval_rec environment e1 in (
+		match n1 with
+			| ValueRaise -> ValueRaise
+			| ValueNil -> ValueBool(true)
+			| ValueCons(l1, l2) -> ValueBool(false)
+			| _ -> raise (OperationError "Operation not found.")
+		)
 	
 	| Raise -> ValueRaise
 	
 	| Try(e1, e2) ->
+		let n1 = eval_rec environment e1 in (
+		match n1 with
+			| ValueRaise -> eval_rec environment e2
+			| _ -> n1
+		)
 
-let eval (e: expression) : value = eval_rec [] e *)
+let eval (e: expression) : value = eval_rec [] e
 
 (* Tests *)
 (* Test cases *)
@@ -439,14 +537,6 @@ let rec type_to_string (t: typeDef) : string = match t with
 	| TypeList(t1) -> "List of " ^ (type_to_string t1)
     | TypePair(t1, t2) -> "(" ^ (type_to_string t1) ^ ", " ^ (type_to_string t1) ^ ")"
 
-let rec value_to_string (v: value) : string = match v with
-    | ValueNum(n) -> string_of_int(n)
-	| ValueBool(b) -> string_of_bool(b)
-	| ValueNil -> "Nil"
-	| ValueCons(v1, v2) -> "cons(" ^ (value_to_string v1) ^ ", " ^ (value_to_string v2) ^ ")"
-	| ValueRaise -> "Raise"
-	| VPair(v1, v2) -> "(" ^ (value_to_string v1) ^ ", " ^ (value_to_string v2) ^ ")"
-
 let rec expression_to_string (e: expression) : string = match e with
 	| Nval(n) -> string_of_int(n)
 	| Bval(b) -> string_of_bool(b)
@@ -480,29 +570,39 @@ let rec expression_to_string (e: expression) : string = match e with
 	| Raise -> "Raise"
 	| Try(e1, e2) -> "try(" ^ (expression_to_string e1) ^ ") with (" ^ (expression_to_string e2) ^ ")"
 
+let rec value_to_string (v: value) : string = match v with
+    | ValueNum(n) -> string_of_int(n)
+	| ValueBool(b) -> string_of_bool(b)
+	| ValueNil -> "Nil"
+	| ValueCons(v1, v2) -> "cons(" ^ (value_to_string v1) ^ ", " ^ (value_to_string v2) ^ ")"
+	| ValueRaise -> "Raise"
+	| ValuePair(v1, v2) -> "(" ^ (value_to_string v1) ^ ", " ^ (value_to_string v2) ^ ")"
+	| ValueFn(x, e1, _) -> "fn (" ^ x ^ ") = " ^ (expression_to_string e1)
+
 (* Test eval *)
 let rec run_rec equations_list n = match equations_list with
-	| (e, correct_type)::tail -> 
+	| (e, correct_type, correct_value)::tail -> 
 		let type_e = typeinfer [] e in
 		let s_type_e = type_to_string type_e in
 		let s_type = type_to_string correct_type in
-		(* let value = eval e in *)
 
 		print_endline "";
 		print_endline (string_of_int(n) ^ " =======================================");
-		
+		print_endline ("Expression: " ^ (expression_to_string e));
+		print_endline ("Type: " ^ s_type_e);
+
 		if (String.compare s_type_e s_type) != 0 then begin print_endline "======================== TYPE NOT CORRECT ========================"; exit(1); end
 		else ();
 
-		(* if value == v then 
-			print_endline "TEST PASSED ===========================";
-		else
-			print_endline "TEST NOT PASSED ======================="; *)
+		let value = eval e in
+		let s_value_e = value_to_string value in
+		let s_value = value_to_string correct_value in 
 
-		print_endline ("Expression: " ^ (expression_to_string e));
-		print_endline ("Type: " ^ s_type_e);
-		(* print_endline "Value: " ^ (value_to_string value); *)
+		print_endline ("Value: " ^ s_value_e);
 		print_endline "";
+		
+		if (String.compare s_value_e s_value) != 0 then begin print_endline "======================== VALUE NOT CORRECT ========================"; exit(1); end
+		else ();
 
 		(run_rec tail (n + 1))
 
@@ -511,17 +611,58 @@ let rec run_rec equations_list n = match equations_list with
 let run equations_list = run_rec equations_list 0
 
 (* Run all *)
-let es = [(e0, TypeInt);  (e1, TypeInt);  (e2, TypeBool);  (e3, TypeBool);  (e4, TypeInt);  
-		  (e5, TypeInt);  (e6, TypeInt);  (e7, TypeInt);  (e8, TypeBool);  (e9, TypeBool);
-	      (e10, TypeBool); (e11, TypeBool); (e12, TypeBool); (e13, TypeBool); (e14, TypeBool); 
-	      (e15, TypeBool); (e16, TypeBool); (e17, TypeBool); (e18, TypeBool); (e19, TypeBool);
-	      (e20, TypeBool); (e21, TypeBool); (e22, TypeBool); (e23, TypeBool); (e24, TypeBool); 
-	      (e25, TypeBool); (e26, TypeBool); (e27, TypeBool); (e28, TypeBool); (e29, TypeBool);
-	      (e30, TypePair(TypeInt, TypeInt)); (e31, TypeInt); (e32, TypeInt); (e33, TypeInt); (e34, TypeInt); (e35, TypeBool); 
-	      (e36, TypeFn(TypeInt, TypeInt)); (e37, TypeInt); (e38, TypeInt); (e39, TypeInt);
-	      (e40, TypeInt); (e41, TypeList(TypeInt)); (e42, TypeList(TypeInt)); (e43, TypeInt); (e44, TypeList(TypeInt)); (e45, TypeBool); 
-	      (e46, TypeBool); (e47, TypeBool); (e48, TypeBool); (e49, TypeInt);
-	      (e50, TypeBool); (e51, TypeBool)];;
+let es = [(e0, TypeInt, ValueNum(5));
+		  (e1, TypeInt, ValueNum(10));  
+		  (e2, TypeBool, ValueBool(true));  
+		  (e3, TypeBool, ValueBool(false));  
+		  (e4, TypeInt, ValueNum(15));  
+		  (e5, TypeInt, ValueNum(5));  
+		  (e6, TypeInt, ValueNum(50));  
+		  (e7, TypeInt, ValueNum(2));  
+		  (e8, TypeBool, ValueBool(false));  
+		  (e9, TypeBool, ValueBool(true));
+	      (e10, TypeBool, ValueBool(true)); 
+	      (e11, TypeBool, ValueBool(false)); 
+	      (e12, TypeBool, ValueBool(false)); 
+	      (e13, TypeBool, ValueBool(false)); 
+	      (e14, TypeBool, ValueBool(true)); 
+	      (e15, TypeBool, ValueBool(true)); 
+	      (e16, TypeBool, ValueBool(false)); 
+	      (e17, TypeBool, ValueBool(true)); 
+	      (e18, TypeBool, ValueBool(false)); 
+	      (e19, TypeBool, ValueBool(true));
+	      (e20, TypeBool, ValueBool(false)); 
+	      (e21, TypeBool, ValueBool(true)); 
+	      (e22, TypeBool, ValueBool(true)); 
+	      (e23, TypeBool, ValueBool(false)); 
+	      (e24, TypeBool, ValueBool(true)); 
+	      (e25, TypeBool, ValueBool(false)); 
+	      (e26, TypeBool, ValueBool(true)); 
+	      (e27, TypeBool, ValueBool(true)); 
+	      (e28, TypeBool, ValueBool(false)); 
+	      (e29, TypeBool, ValueBool(true));
+	      (e30, TypePair(TypeInt, TypeInt), ValuePair(ValueNum(5), ValueNum(10))); 
+	      (e31, TypeInt, ValueNum(5)); 
+	      (e32, TypeInt, ValueNum(10)); 
+	      (e33, TypeInt, ValueNum(5)); 
+	      (e34, TypeInt, ValueNum(10)); 
+	      (e35, TypeBool, ValueBool(true)); 
+	      (e36, TypeFn(TypeInt, TypeInt), ValueFn("var_teste1", Binop(Sum, Id("var_teste1"), Nval(5)), [])); 
+	      (e37, TypeInt, ValueNum(15)); 
+	      (e38, TypeInt, ValueNum(25)); 
+	      (e39, TypeInt, ValueNum(120));
+	      (e40, TypeInt, ValueNum(34)); 
+	      (e41, TypeList(TypeInt), ValueCons(ValueNum(1), ValueCons(ValueNum(2), ValueCons(ValueNum(3), ValueNil)))); 
+	      (e42, TypeList(TypeInt), ValueCons(ValueNum(5), ValueCons(ValueNum(2), ValueCons(ValueNum(5), ValueNil)))); 
+	      (e43, TypeInt, ValueNum(1)); 
+	      (e44, TypeList(TypeInt), ValueCons(ValueNum(2), ValueCons(ValueNum(3), ValueNil))); 
+	      (e45, TypeBool, ValueBool(false)); 
+	      (e46, TypeBool, ValueBool(true)); 
+	      (e47, TypeBool, ValueBool(true)); 
+	      (e48, TypeBool, ValueBool(false)); 
+	      (e49, TypeInt, ValueBool(true));
+	      (e50, TypeBool, ValueBool(true)); 
+	      (e51, TypeBool, ValueBool(false))];;
 
 print_endline "Running tests...";;
 run es;;
