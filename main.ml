@@ -8,7 +8,8 @@ type typeDef = TypeInt
 			| TypeId of string 
 			| TypeFn of typeDef * typeDef 
 			| TypeList of typeDef
-			| TypePair of typeDef * typeDef 
+			| TypePair of typeDef * typeDef
+			| TypeUndefined (* only for tests *)
 
 type binaryOperator = Sum 
 					| Sub 
@@ -450,7 +451,7 @@ let rec eval_rec (environment: env) (e: expression) : value = match e with
 let eval (e: expression) : value = eval_rec [] e
 
 (* Tests *)
-(* Test cases *)
+(* Test cases that should execute normally *)
 let e0 = Nval(5)
 
 let e1 = Nval(10)
@@ -543,6 +544,34 @@ let e49 = Try(e24, e6)
 let e50 = Try(e24, e25)
 let e51 = Try(Raise, e25)
 
+let e52 = Fn("var_test4", App(Id("var_test4"), App(Id("var_test4"), Nval(3))))
+let e53 = Fn("var_test5", App(Id("var_test5"), App(Id("var_test5"), Bval(true))))
+let e54 = Fn("var_test7", App(Id("var_test7"), Nval(3)))
+let e55 = Fn("var_test8", Id("var_test8"))
+
+let e56 = Letrec("sum", "l",
+				 If(Isempty(Id("l")),
+				    Nval(0),
+				    Binop(Sum, 
+				    	  Hd(Id("l")), 
+				    	  App(Id("sum"), Tl(Id("l"))))	
+				 ),
+				 App(Id("sum"), e41))
+
+let e57 = Letrec("mult", "l",
+				 If(Isempty(Id("l")),
+				    Nval(1),
+				    Binop(Mult, 
+				    	  Hd(Id("l")), 
+				    	  App(Id("mult"), Tl(Id("l"))))	
+				 ),
+				 App(Id("mult"), e42))
+
+(* Test cases that shouldn't execute normally *)
+let w0 = Fn("var_test6", App(Id("var_test6"), Pair(App(Id("var_test6"), Nval(3)), App(Id("var_test6"), Nval(3)))))
+let w1 = Let("var_test9", Fn("var_test10", Id("var_test10")), Pair(App(Id("var_test9"), Nval(3)), App(Id("var_test9"), Bval(true))))
+
+
 (* Utils *)
 let rec type_to_string (t: typeDef) : string = match t with
     | TypeInt -> "Integer"
@@ -551,6 +580,7 @@ let rec type_to_string (t: typeDef) : string = match t with
 	| TypeFn(t1, t2) -> "(" ^ (type_to_string t1) ^ ") -> (" ^ (type_to_string t2) ^ ")"
 	| TypeList(t1) -> "List of " ^ (type_to_string t1)
     | TypePair(t1, t2) -> "(" ^ (type_to_string t1) ^ ", " ^ (type_to_string t1) ^ ")"
+    | TypeUndefined -> "Undefined"
 
 let rec expression_to_string (e: expression) : string = match e with
 	| Nval(n) -> string_of_int(n)
@@ -574,7 +604,7 @@ let rec expression_to_string (e: expression) : string = match e with
 	| If(e1, e2, e3) -> "if(" ^ (expression_to_string e1) ^ ") {" ^ (expression_to_string e2) ^ "} else {" ^ (expression_to_string e3) ^ "}"
 	| Id(x) -> "id(" ^ x ^ ")"
 	| App(e1, e2) -> "(" ^ (expression_to_string e1) ^ " " ^ (expression_to_string e2) ^ ")"
-	| Fn(x, e1) -> "fn " ^ x ^ " in (" ^ (expression_to_string e1) ^ ")"
+	| Fn(x, e1) -> "fn " ^ x ^ " -> (" ^ (expression_to_string e1) ^ ")"
 	| Let(x, e1, e2) -> "let " ^ x ^ " = (" ^ (expression_to_string e1) ^ ") in (" ^ (expression_to_string e2) ^ ")"
 	| Letrec(x, y, e1, e2) -> "let rec " ^ x ^ " = fn " ^ y ^ "( " ^ (expression_to_string e1) ^ ") in (" ^ (expression_to_string e2) ^ ")"
 	| Nil -> "Nil"
@@ -588,14 +618,14 @@ let rec expression_to_string (e: expression) : string = match e with
 let rec value_to_string (v: value) : string = match v with
     | ValueNum(n) -> string_of_int(n)
 	| ValueBool(b) -> string_of_bool(b)
-	| ValueNil -> "Nil"
+	| ValueNil -> "ValueNil"
 	| ValueCons(v1, v2) -> "cons(" ^ (value_to_string v1) ^ ", " ^ (value_to_string v2) ^ ")"
 	| ValueRaise -> "Raise"
 	| ValuePair(v1, v2) -> "(" ^ (value_to_string v1) ^ ", " ^ (value_to_string v2) ^ ")"
 	| ValueFn(x, e1, _) -> "fn (" ^ x ^ ") = " ^ (expression_to_string e1)
 
 (* Test eval *)
-let rec run_rec equations_list n = match equations_list with
+let rec run_right_rec equations_list n = match equations_list with
 	| (e, correct_type, correct_value)::tail -> 
 		let type_e = typeinfer [] e in
 		let s_type_e = type_to_string type_e in
@@ -619,11 +649,33 @@ let rec run_rec equations_list n = match equations_list with
 		if (String.compare s_value_e s_value) != 0 then begin print_endline "======================== VALUE NOT CORRECT ========================"; exit(1); end
 		else ();
 
-		(run_rec tail (n + 1))
+		(run_right_rec tail (n + 1))
 
 	| [] -> ();;
 
-let run equations_list = run_rec equations_list 0
+let run_right equations_list = run_right_rec equations_list 0
+
+let rec run_wrong_rec equations_list n = match equations_list with
+	| e::tail -> 
+		let new_n = n + 1 in 
+		
+		print_endline "";
+		print_endline (string_of_int(n) ^ " =======================================");
+
+		let type_e = try typeinfer [] e with (UnifyError err) -> TypeUndefined in
+		let s_type_e = type_to_string type_e in
+
+		print_endline ("Expression: " ^ (expression_to_string e));
+		print_endline ("Type: " ^ s_type_e);
+
+		if (String.compare s_type_e "Undefined") != 0 then begin print_endline "======================== ERROR ========================"; exit(1); end
+		else ();
+
+		(run_wrong_rec tail new_n)
+
+	| [] -> ();;
+
+let run_wrong equations_list = run_wrong_rec equations_list 0
 
 (* Run all *)
 let es = [(e0, TypeInt, ValueNum(5));
@@ -677,7 +729,24 @@ let es = [(e0, TypeInt, ValueNum(5));
 	      (e48, TypeBool, ValueBool(false)); 
 	      (e49, TypeInt, ValueBool(true));
 	      (e50, TypeBool, ValueBool(true)); 
-	      (e51, TypeBool, ValueBool(false))];;
+	      (e51, TypeBool, ValueBool(false));
+	      (e52, TypeFn(TypeFn(TypeInt, TypeInt), TypeInt), ValueFn("var_test4", App(Id("var_test4"), App(Id("var_test4"), Nval(3))), []));
+	      (e53, TypeFn(TypeFn(TypeBool, TypeBool), TypeBool), ValueFn("var_test5", App(Id("var_test5"), App(Id("var_test5"), Bval(true))), []));
+	      (e54, TypeFn(TypeFn(TypeInt, TypeId("#x1")), TypeId("#x1")), ValueFn("var_test7", App(Id("var_test7"), Nval(3)), []));
+	      (e55, TypeFn(TypeId("#x0"), TypeId("#x0")), ValueFn("var_test8", Id("var_test8"), []));
+	      (e56, TypeInt, ValueNum(6));
+	      (e57, TypeInt, ValueNum(150))];;
 
-print_endline "Running tests...";;
-run es;;
+let ws = [w0; w1];;
+
+print_endline "";;
+print_endline "---------------------------------------------------------------";;
+print_endline "Running tests that should execute right...";;
+print_endline "---------------------------------------------------------------";;
+run_right es;;
+
+print_endline "";;
+print_endline "---------------------------------------------------------------";;
+print_endline "Running tests with type issues...";;
+print_endline "---------------------------------------------------------------";;
+run_wrong ws;;
