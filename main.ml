@@ -301,24 +301,27 @@ let rec eval_rec (environment: env) (e: expression) : value = match e with
 	| Bval(n) -> ValueBool(n)
 
 	| Binop(op, e1, e2) ->
-		let n1 = eval_rec environment e1 in
-		let n2 = eval_rec environment e2 in (
-		match (op, n1, n2) with
-			| (_, ValueRaise, _) -> ValueRaise
-			| (_, _, ValueRaise) -> ValueRaise
-			| (Sum, ValueNum(n1), ValueNum(n2)) -> ValueNum(n1 + n2)
-			| (Sub, ValueNum(n1), ValueNum(n2)) -> ValueNum(n1 - n2)
-			| (Mult, ValueNum(n1), ValueNum(n2)) -> ValueNum(n1 * n2)
-			| (Div, ValueNum(n1), ValueNum(n2)) -> if n2 != 0 then ValueNum(n1 / n2) else ValueRaise
-			| (Equal, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 == n2)
-			| (Diff, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 != n2)
-			| (Less, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 < n2)
-			| (LessOrEqual, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 <= n2)
-			| (Greater, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 > n2)
-			| (GreaterOrEqual, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 >= n2)
-			| (And, ValueBool(n1), ValueBool(n2)) -> ValueBool(n1 && n2)
-			| (Or, ValueBool(n1), ValueBool(n2)) -> ValueBool(n1 || n2)
-			| (_, _, _) -> raise (OperationError "Operation not found.")
+		let n1 = eval_rec environment e1 in (
+			match n1 with
+			| ValueRaise -> ValueRaise
+			| _ ->
+				let n2 = eval_rec environment e2 in (
+					match (op, n1, n2) with
+						| (_, _, ValueRaise) -> ValueRaise
+						| (Sum, ValueNum(n1), ValueNum(n2)) -> ValueNum(n1 + n2)
+						| (Sub, ValueNum(n1), ValueNum(n2)) -> ValueNum(n1 - n2)
+						| (Mult, ValueNum(n1), ValueNum(n2)) -> ValueNum(n1 * n2)
+						| (Div, ValueNum(n1), ValueNum(n2)) -> if n2 != 0 then ValueNum(n1 / n2) else ValueRaise
+						| (Equal, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 == n2)
+						| (Diff, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 != n2)
+						| (Less, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 < n2)
+						| (LessOrEqual, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 <= n2)
+						| (Greater, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 > n2)
+						| (GreaterOrEqual, ValueNum(n1), ValueNum(n2)) -> ValueBool(n1 >= n2)
+						| (And, ValueBool(n1), ValueBool(n2)) -> ValueBool(n1 && n2)
+						| (Or, ValueBool(n1), ValueBool(n2)) -> ValueBool(n1 || n2)
+						| (_, _, _) -> raise (OperationError "Operation not found.")
+				)
 		)
 
 	| Unop(op, e1) ->
@@ -330,49 +333,55 @@ let rec eval_rec (environment: env) (e: expression) : value = match e with
 		)
 
 	| Pair(e1, e2) ->
-		let n1 = eval_rec environment e1 in 
-		let n2 = eval_rec environment e2 in (
-		match (n1, n2) with
-			| (_, ValueRaise) -> ValueRaise
-			| (ValueRaise, _) -> ValueRaise
-			| (_, _) -> ValuePair(n1, n2)
+		let n1 = eval_rec environment e1 in (
+			match n1 with
+			| ValueRaise -> ValueRaise
+			| _ -> 
+				let n2 = eval_rec environment e2 in (
+					match (n1, n2) with
+						| (_, ValueRaise) -> ValueRaise
+						| (_, _) -> ValuePair(n1, n2)
+				)
 		)
 
 	| Fst(e1) ->
 		let n1 = eval_rec environment e1 in (
-		match n1 with
-			| ValueRaise -> ValueRaise
-			| ValuePair(n11, n12) -> n11
-			| _ -> raise (OperationError "Operation not found.")
+			match n1 with
+				| ValueRaise -> ValueRaise
+				| ValuePair(n11, n12) -> n11
+				| _ -> raise (OperationError "Operation not found.")
 		)
 	
 	| Snd(e1) ->
 		let n1 = eval_rec environment e1 in (
-		match n1 with
-			| ValueRaise -> ValueRaise
-			| ValuePair(n11, n12) -> n12
-			| _ -> raise (OperationError "Operation not found.")
+			match n1 with
+				| ValueRaise -> ValueRaise
+				| ValuePair(n11, n12) -> n12
+				| _ -> raise (OperationError "Operation not found.")
 		)
 
 	| If(e1, e2,  e3) ->
 		let n1 = eval_rec environment e1 in (
-		match n1 with
-			| ValueRaise -> ValueRaise
-			| ValueBool(true) -> eval_rec environment e2
-			| ValueBool(false) -> eval_rec environment e3
-			| _ -> raise (OperationError "Operation not found.")
+			match n1 with
+				| ValueRaise -> ValueRaise
+				| ValueBool(true) -> eval_rec environment e2
+				| ValueBool(false) -> eval_rec environment e3
+				| _ -> raise (OperationError "Operation not found.")
 		)
 
 	| Id(x) -> lookup environment x
 
 	| App(e1, e2) ->
-		let n1 = eval_rec environment e1 in 
-		let n2 = eval_rec environment e2 in (
-		match (n1, n2) with
-			| (ValueRaise, _) -> ValueRaise
-			| (_, ValueRaise) -> ValueRaise
-			| (ValueFn(x, f, f_env), n) -> eval_rec ((x,n)::f_env) f
-			| (_, _) -> raise (OperationError "Operation not found.")
+		let n1 = eval_rec environment e1 in (
+			match n1 with
+			| ValueRaise -> ValueRaise
+			| _ -> 
+				let n2 = eval_rec environment e2 in (
+					match (n1, n2) with
+						| (_, ValueRaise) -> ValueRaise
+						| (ValueFn(x, f, f_env), n) -> eval_rec ((x,n)::f_env) f
+						| (_, _) -> raise (OperationError "Operation not found.")
+				)
 		)
 	
 	| Fn(x, e1) -> ValueFn(x, e1, environment)
@@ -391,48 +400,51 @@ let rec eval_rec (environment: env) (e: expression) : value = match e with
 	| Nil -> ValueNil
 	
 	| Cons(e1, e2) ->
-		let n1 = eval_rec environment e1 in 
-		let n2 = eval_rec environment e2 in (
-		match (n1, n2) with
-			| (ValueRaise, _) -> ValueRaise
-			| (_, ValueRaise) -> ValueRaise
-			| (_, _) -> ValueCons(n1, n2)
+		let n1 = eval_rec environment e1 in (
+			match n1 with
+			| ValueRaise -> ValueRaise
+			| _ ->
+				let n2 = eval_rec environment e2 in (
+					match (n1, n2) with
+						| (_, ValueRaise) -> ValueRaise
+						| (_, _) -> ValueCons(n1, n2)
+				)
 		)
 	
 	| Hd(e1) -> 
 		let n1 = eval_rec environment e1 in (
-		match n1 with
-			| ValueRaise -> ValueRaise
-			| ValueNil -> ValueRaise
-			| ValueCons(n11, _) -> n11
-			| _ -> raise (OperationError "Operation not found.")
+			match n1 with
+				| ValueRaise -> ValueRaise
+				| ValueNil -> ValueRaise
+				| ValueCons(n11, _) -> n11
+				| _ -> raise (OperationError "Operation not found.")
 		)
 
 	| Tl(e1) ->
 		let n1 = eval_rec environment e1 in (
-		match n1 with
-			| ValueRaise -> ValueRaise
-			| ValueNil -> ValueRaise
-			| ValueCons(_, n12) -> n12
-			| _ -> raise (OperationError "Operation not found.")
+			match n1 with
+				| ValueRaise -> ValueRaise
+				| ValueNil -> ValueRaise
+				| ValueCons(_, n12) -> n12
+				| _ -> raise (OperationError "Operation not found.")
 		)
 	
 	| Isempty(e1) ->
 		let n1 = eval_rec environment e1 in (
-		match n1 with
-			| ValueRaise -> ValueRaise
-			| ValueNil -> ValueBool(true)
-			| ValueCons(l1, l2) -> ValueBool(false)
-			| _ -> raise (OperationError "Operation not found.")
+			match n1 with
+				| ValueRaise -> ValueRaise
+				| ValueNil -> ValueBool(true)
+				| ValueCons(l1, l2) -> ValueBool(false)
+				| _ -> raise (OperationError "Operation not found.")
 		)
 	
 	| Raise -> ValueRaise
 	
 	| Try(e1, e2) ->
 		let n1 = eval_rec environment e1 in (
-		match n1 with
-			| ValueRaise -> eval_rec environment e2
-			| _ -> n1
+			match n1 with
+				| ValueRaise -> eval_rec environment e2
+				| _ -> n1
 		)
 
 let eval (e: expression) : value = eval_rec [] e
@@ -656,12 +668,12 @@ let es = [(e0, TypeInt, ValueNum(5));
 	      (e39, TypeInt, ValueNum(120));
 	      (e40, TypeInt, ValueNum(55)); 
 	      (e41, TypeList(TypeInt), ValueCons(ValueNum(1), ValueCons(ValueNum(2), ValueCons(ValueNum(3), ValueNil)))); 
-	      (e42, TypeList(TypeInt), ValueCons(ValueNum(5), ValueCons(ValueNum(2), ValueCons(ValueNum(5), ValueNil)))); 
+	      (e42, TypeList(TypeInt), ValueCons(ValueNum(5), ValueCons(ValueNum(2), ValueCons(ValueNum(15), ValueNil)))); 
 	      (e43, TypeInt, ValueNum(1)); 
 	      (e44, TypeList(TypeInt), ValueCons(ValueNum(2), ValueCons(ValueNum(3), ValueNil))); 
 	      (e45, TypeBool, ValueBool(false)); 
 	      (e46, TypeBool, ValueBool(true)); 
-	      (e47, TypeBool, ValueBool(true)); 
+	      (e47, TypeBool, ValueBool(false)); (* cons(Nil, Nil) eh considerado vazio? *) 
 	      (e48, TypeBool, ValueBool(false)); 
 	      (e49, TypeInt, ValueBool(true));
 	      (e50, TypeBool, ValueBool(true)); 
