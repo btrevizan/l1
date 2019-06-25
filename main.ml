@@ -393,9 +393,9 @@ let rec eval_rec (environment: env) (e: expression) : value = match e with
 			| _ -> eval_rec ((x, n1)::environment) e2
 		)
 
-	| Letrec(x, y, e1, e2) -> 
-		let alpha' = ValueFn(y, Letrec(x, y, e1, e1), environment) in
-		eval_rec ((x, alpha')::environment) e2
+	| Letrec(f, y, e1, e2) -> 
+		let alpha' = ValueFn(y, Letrec(f, y, e1, e1), environment) in
+		eval_rec ((f, alpha')::environment) e2
 
 	| Nil -> ValueNil
 	
@@ -673,7 +673,7 @@ let es = [(e0, TypeInt, ValueNum(5));
 	      (e44, TypeList(TypeInt), ValueCons(ValueNum(2), ValueCons(ValueNum(3), ValueNil))); 
 	      (e45, TypeBool, ValueBool(false)); 
 	      (e46, TypeBool, ValueBool(true)); 
-	      (e47, TypeBool, ValueBool(false)); (* cons(Nil, Nil) eh considerado vazio? *) 
+	      (e47, TypeBool, ValueBool(false));
 	      (e48, TypeBool, ValueBool(false)); 
 	      (e49, TypeInt, ValueBool(true));
 	      (e50, TypeBool, ValueBool(true)); 
