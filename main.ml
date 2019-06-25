@@ -507,10 +507,13 @@ let e39 = Letrec("factorial", "x",
 
 let e40 = Letrec("fibonacci", "x", 
                  If(Binop(LessOrEqual, Id("x"), Nval(0)), 
-                    Nval(0), 
-                    Binop(Sum, 
-                    	  App(Id("fibonacci"), Binop(Sub, Id("x"), Nval(1))),
-                    	  App(Id("fibonacci"), Binop(Sub, Id("x"), Nval(2))))), 
+                    Nval(0),
+					If(Binop(Equal, Id("x"), Nval(1)),
+						Nval(1),
+						Binop(Sum, 
+                    		  App(Id("fibonacci"), Binop(Sub, Id("x"), Nval(1))),
+                    	  	  App(Id("fibonacci"), Binop(Sub, Id("x"), Nval(2)))))
+                    ), 
                  App(Id("fibonacci"), e1))
 
 let e41 = Cons(Nval(1), Cons(Nval(2), Cons(Nval(3), Nil)))
@@ -651,7 +654,7 @@ let es = [(e0, TypeInt, ValueNum(5));
 	      (e37, TypeInt, ValueNum(15)); 
 	      (e38, TypeInt, ValueNum(25)); 
 	      (e39, TypeInt, ValueNum(120));
-	      (e40, TypeInt, ValueNum(34)); 
+	      (e40, TypeInt, ValueNum(55)); 
 	      (e41, TypeList(TypeInt), ValueCons(ValueNum(1), ValueCons(ValueNum(2), ValueCons(ValueNum(3), ValueNil)))); 
 	      (e42, TypeList(TypeInt), ValueCons(ValueNum(5), ValueCons(ValueNum(2), ValueCons(ValueNum(5), ValueNil)))); 
 	      (e43, TypeInt, ValueNum(1)); 
