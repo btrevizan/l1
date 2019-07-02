@@ -591,9 +591,29 @@ let e57 = Letrec("mult", "l",
 				 ),
 				 App(Id("mult"), e42))
 
+let e58 = Letrec("all", "l",
+				 If(Isempty(Id("l")),
+				    Bval(true),
+				    Binop(And, 
+				    	  Hd(Id("l")), 
+				    	  App(Id("all"), Tl(Id("l"))))	
+				 ),
+				 App(Id("all"), Cons(Bval(true), Cons(Bval(true), Cons(Bval(true), Cons(Bval(true), Nil))))))
+
+let e59 = Letrec("all", "l",
+				 If(Isempty(Id("l")),
+				    Bval(true),
+				    Binop(And, 
+				    	  Hd(Id("l")), 
+				    	  App(Id("all"), Tl(Id("l"))))	
+				 ),
+				 App(Id("all"), Cons(Bval(true), Cons(Bval(false), Cons(Bval(true), Nil)))))
+
 (* Test cases that shouldn't execute normally *)
 let w0 = Fn("var_test6", App(Id("var_test6"), Pair(App(Id("var_test6"), Nval(3)), App(Id("var_test6"), Nval(3)))))
 let w1 = Let("var_test9", Fn("var_test10", Id("var_test10")), Pair(App(Id("var_test9"), Nval(3)), App(Id("var_test9"), Bval(true))))
+let w2 = Cons(Nval(1), Cons(Bval(true), Cons(Nval(3), Nil)))
+let w3 = Letrec("all", "l", If(Isempty(Id("l")), Bval(true), Binop(Mult, Hd(Id("l")), App(Id("all"), Tl(Id("l"))))), App(Id("all"), Cons(Bval(true), Cons(Bval(true), Cons(Bval(true), Cons(Bval(true), Nil))))))
 
 
 (* Utils *)
@@ -759,9 +779,11 @@ let es = [(e0, TypeInt, ValueNum(5));
 	      (e54, TypeFn(TypeFn(TypeInt, TypeId("#x1")), TypeId("#x1")), ValueFn("var_test7", App(Id("var_test7"), Nval(3)), []));
 	      (e55, TypeFn(TypeId("#x0"), TypeId("#x0")), ValueFn("var_test8", Id("var_test8"), []));
 	      (e56, TypeInt, ValueNum(6));
-	      (e57, TypeInt, ValueNum(150))];;
+	      (e57, TypeInt, ValueNum(150));
+	      (e58, TypeBool, ValueBool(true));
+	      (e59, TypeBool, ValueBool(false))];;
 
-let ws = [w0; w1];;
+let ws = [w0; w1; w2; w3];;
 
 print_endline "";;
 print_endline "---------------------------------------------------------------";;
