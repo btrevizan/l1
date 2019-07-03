@@ -28,3 +28,6 @@ obj/
 
 # example
 example.ml
+
+# MacOS junk
+.DS_Store

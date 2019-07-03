@@ -1,6 +1,6 @@
 mkdir bin
 mkdir obj
-ocamlopt -o bin/tests main.ml
+ocamlopt -o bin/main main.ml
 mv *.cmi obj/
 mv *.cmx obj/
 

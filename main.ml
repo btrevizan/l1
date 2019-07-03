@@ -669,59 +669,6 @@ let rec value_to_string (v: value) : string = match v with
 	| ValueFn(x, e1, _) -> "fn (" ^ x ^ ") = " ^ (expression_to_string e1)
 
 (* Test eval *)
-let rec run_right_rec equations_list n = match equations_list with
-	| (e, correct_type, correct_value)::tail -> 
-		let type_e = typeinfer [] e in
-		let s_type_e = type_to_string type_e in
-		let s_type = type_to_string correct_type in
-
-		print_endline "";
-		print_endline (string_of_int(n) ^ " =======================================");
-		print_endline ("Expression: " ^ (expression_to_string e));
-		print_endline ("Type: " ^ s_type_e);
-
-		if (String.compare s_type_e s_type) != 0 then begin print_endline "======================== TYPE NOT CORRECT ========================"; exit(1); end
-		else ();
-
-		let value = eval e in
-		let s_value_e = value_to_string value in
-		let s_value = value_to_string correct_value in 
-
-		print_endline ("Value: " ^ s_value_e);
-		print_endline "";
-		
-		if (String.compare s_value_e s_value) != 0 then begin print_endline "======================== VALUE NOT CORRECT ========================"; exit(1); end
-		else ();
-
-		(run_right_rec tail (n + 1))
-
-	| [] -> ();;
-
-let run_right equations_list = run_right_rec equations_list 0
-
-let rec run_wrong_rec equations_list n = match equations_list with
-	| e::tail -> 
-		let new_n = n + 1 in 
-		
-		print_endline "";
-		print_endline (string_of_int(n) ^ " =======================================");
-
-		let type_e = try typeinfer [] e with (UnifyError err) -> TypeUndefined in
-		let s_type_e = type_to_string type_e in
-
-		print_endline ("Expression: " ^ (expression_to_string e));
-		print_endline ("Type: " ^ s_type_e);
-
-		if (String.compare s_type_e "Undefined") != 0 then begin print_endline "======================== ERROR ========================"; exit(1); end
-		else ();
-
-		(run_wrong_rec tail new_n)
-
-	| [] -> ();;
-
-let run_wrong equations_list = run_wrong_rec equations_list 0
-
-(* Run all *)
 let es = [(e0, TypeInt, ValueNum(5));
 		  (e1, TypeInt, ValueNum(10));  
 		  (e2, TypeBool, ValueBool(true));  
@@ -785,14 +732,54 @@ let es = [(e0, TypeInt, ValueNum(5));
 
 let ws = [w0; w1; w2; w3];;
 
-print_endline "";;
-print_endline "---------------------------------------------------------------";;
-print_endline "Running tests that should execute right...";;
-print_endline "---------------------------------------------------------------";;
-run_right es;;
+let rec run_right_rec equations_list n = match equations_list with
+	| (e, correct_type, correct_value)::tail -> 
+		let type_e = typeinfer [] e in
+		let s_type_e = type_to_string type_e in
+		let s_type = type_to_string correct_type in
 
-print_endline "";;
-print_endline "---------------------------------------------------------------";;
-print_endline "Running tests with type issues...";;
-print_endline "---------------------------------------------------------------";;
-run_wrong ws;;
+		print_endline "";
+		print_endline (string_of_int(n) ^ " =======================================");
+		print_endline ("Expression: " ^ (expression_to_string e));
+		print_endline ("Type: " ^ s_type_e);
+
+		if (String.compare s_type_e s_type) != 0 then begin print_endline "======================== TYPE NOT CORRECT ========================"; exit(1); end
+		else ();
+
+		let value = eval e in
+		let s_value_e = value_to_string value in
+		let s_value = value_to_string correct_value in 
+
+		print_endline ("Value: " ^ s_value_e);
+		print_endline "";
+		
+		if (String.compare s_value_e s_value) != 0 then begin print_endline "======================== VALUE NOT CORRECT ========================"; exit(1); end
+		else ();
+
+		(run_right_rec tail (n + 1))
+
+	| [] -> ();;
+
+let run_right equations_list = run_right_rec es 0
+
+let rec run_wrong_rec equations_list n = match equations_list with
+	| e::tail -> 
+		let new_n = n + 1 in 
+		
+		print_endline "";
+		print_endline (string_of_int(n) ^ " =======================================");
+
+		let type_e = try typeinfer [] e with (UnifyError err) -> TypeUndefined in
+		let s_type_e = type_to_string type_e in
+
+		print_endline ("Expression: " ^ (expression_to_string e));
+		print_endline ("Type: " ^ s_type_e);
+
+		if (String.compare s_type_e "Undefined") != 0 then begin print_endline "======================== ERROR ========================"; exit(1); end
+		else ();
+
+		(run_wrong_rec tail new_n)
+
+	| [] -> ();;
+
+let run_wrong equations_list = run_wrong_rec ws 0

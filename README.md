@@ -8,5 +8,5 @@ sh make.sh
 
 ## Execução
 ```
-./bin/l1
+./bin/main
 ```
